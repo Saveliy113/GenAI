@@ -2,150 +2,219 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>AI Vocabulary-Application Relationship Graph</title>
-  <script src="https://d3.org/d3.v7.min.js"></script>
+  <title>AI Application–Vocabulary Relationship with Frequencies</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    .node { stroke: #fff; stroke-width: 1.5px; }
-    .link { stroke: #999; stroke-opacity: 0.6; }
-    text { font: 12px sans-serif; pointer-events: none; }
+    html, body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh; overflow: hidden;
+      background: #f4f4f8;
+    }
+    h2 {
+      position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+      margin: 0; z-index: 12; font-family: 'Segoe UI', Arial, sans-serif; color: #141829; font-size: 2.15em;
+      background: rgba(255,255,255,0.83); border-radius: 7px; padding: 0.13em 1em 0.13em 1em;
+      box-shadow: 0 2px 12px rgba(120,130,150,0.08);
+    }
+    #legend {
+      position: absolute; z-index: 13; top: 68px; left: 34px;
+      background: rgba(247,247,247,0.97); border-radius: 12px; padding: 12px 26px 12px 22px;
+      box-shadow: 0 8px 32px rgba(80,88,112,0.13);
+      font-size: 15px; font-family: 'Segoe UI', Arial, sans-serif;
+      color: #1a222f;
+      display: flex; align-items: center; gap: 24px;
+    }
+    #legend .icon { display:inline-block;width:22px;height:22px;border-radius:50%;margin-right:4px; }
+    #legend .app { background: #2563eb; border:1.8px solid #386cd6; }
+    #legend .term { background: #10b981; border:1.8px solid #16986b; }
+    #legend .edge-explicit { display:inline-block; height:7px; width:32px; background: #2563eb; border-radius:3px; margin-right:7px;}
+    #legend .edge-implicit { display:inline-block; height:7px; width:32px; background: #10b981; border-radius:3px; margin-right:7px; border-bottom:2.5px dashed #129d74;}
+    svg { width: 100vw; height: 100vh; display: block; }
+    .node circle {
+      stroke: #fff; stroke-width: 2.7px;
+      transition: filter 0.3s; filter: drop-shadow(0 2px 8px rgba(36,37,38,0.08));
+      cursor: pointer;
+    }
+    .node text {
+      pointer-events: none;
+      font-size: 1.04em;
+      fill: #253252;
+      font-weight: 650;
+      text-shadow: 1.5px 1.5px 4px #fff, 0 2px 4px #fff;
+    }
+    .link-explicit {
+      stroke: #2563eb;
+      stroke-width: 3.5px;
+      opacity: 0.87;
+    }
+    .link-implicit {
+      stroke: #10b981;
+      stroke-width: 2.2px;
+      opacity: 0.57;
+      stroke-dasharray: 7 4;
+    }
+    .edge-label {
+      fill: #314457;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 1.01em;
+      font-weight: bold;
+      pointer-events: none;
+      paint-order: stroke; stroke: #fff; stroke-width: 4.5px;
+    }
+    .edge-label tspan { stroke: none; }
   </style>
 </head>
 <body>
-  <h2>AI Vocabulary & Application Relationship Graph</h2>
-  <svg width="900" height="700"></svg>
+  <h2>AI Vocabulary–Application Relationship Graph with Frequencies</h2>
+  <div id="legend">
+    <span><span class="icon app"></span>Application</span>
+    <span><span class="icon term"></span>Vocabulary</span>
+    <span><span class="edge-explicit"></span>Explicit (solid blue)</span>
+    <span><span class="edge-implicit"></span>Implicit (dashed green)</span>
+    <span style="color:#334;">E: explicit freq, I: implicit freq</span>
+  </div>
+  <svg></svg>
   <script>
+    function getSize() {
+      return [window.innerWidth, window.innerHeight];
+    }
+    let [width, height] = getSize();
+
+    const svg = d3.select("svg").attr("width", width).attr("height", height);
+
     const nodes = [
-      {id: 'NLP', type: 'app'},
-      {id: 'Computer Vision', type: 'app'},
-      {id: 'Recommendation System', type: 'app'},
-      {id: 'Autonomous System', type: 'app'},
-      {id: 'Generative AI (GenAI)', type: 'app'},
-      {id: 'Predictive Analytics', type: 'app'},
-     {id: 'AI in Healtcare', type: 'app'},
-      {id: 'Artificial Intelligence (AI.)', type: 'term'},
-      {id: 'Machine Learning (ML)', type: 'term'},
-      {id: 'Deep Learning', type: 'term'},
-      {id: 'Neural Network', type: 'term'},
-      {id: 'Natural Language Processing (NLP)', type: 'term'},
-      {id: 'Computer Vision', type: 'term'},
-      {id: 'Generative AI (GenAI)', type: 'term'},
-      {id: 'Recommendation System', type: 'term'},
-      {id: 'Predictive Analytics', type: 'term'},
-     {id: 'Autonomous System', type: 'term'},
-      {id: 'Transfer Learning', type: 'term'},
-     {id: 'Reinforcement Learning', type: 'term'},
-     {id: 'Adversarial Example', type: 'term'},
-     {id: 'Overfitting', type: 'term'},
-      {id: 'Model Interpretability', type: 'term'},
-      {id: 'Bias (in AI)', type: 'term'},
-      {id: 'Cold Start Problem', type: 'term'},
-      {id: 'Epoch', type: 'term'},
-      {id: 'Hyperparameter', type: 'term'},
-     {id: 'Data Augmentation', type: 'term'}
+      {id: 'NLP', type: 'app'}, {id: 'Computer Vision', type: 'app'}, {id: 'Recommendation System', type: 'app'},
+      {id: 'Autonomous System', type: 'app'}, {id: 'Generative AI', type: 'app'},
+      {id: 'Predictive Analytics', type: 'app'}, {id: 'Healthcare AI', type: 'app'},
+      {id: 'Artificial Intelligence (AI)', type: 'term'},
+      {id: 'Machine Learning (ML)', type: 'term'}, {id: 'Deep Learning', type: 'term'},
+      {id: 'Neural Network', type: 'term'}, {id: 'Natural Language Processing (NLP)', type: 'term'},
+      {id: 'Computer Vision', type: 'term'}, {id: 'Generative AI (GenAI)', type: 'term'},
+      {id: 'Recommendation System', type: 'term'}, {id: 'Predictive Analytics', type: 'term'},
+      {id: 'Autonomous System', type: 'term'}, {id: 'Transfer Learning', type: 'term'},
+      {id: 'Reinforcement Learning', type: 'term'}, {id: 'Adversarial Example', type: 'term'},
+      {id: 'Overfitting', type: 'term'}, {id: 'Model Interpretability', type: 'term'},
+      {id: 'Bias (in AI)', type: 'term'}, {id: 'Cold Start Problem', type: 'term'},
+      {id: 'Epoch', type: 'term'}, {id: 'Hyperparameter', type: 'term'},
+      {id: 'Data Augmentation', type: 'term'}
     ];
 
     const links = [
-      {source: 'NL@', target: 'Natural Language Processing (NLP)'},
-      {source: 'NLP', target: 'Deep Learning'},
-      {source: 'NLP', target: 'Neural Network'},
-      {source: 'Computer Vision', target: 'Computer Vision'},
-      {source: 'Computer Vision', target: 'Deep Learning'},
-      {source: 'Computer Vision', target: 'Neural Network'},
-      {source: 'Computer Vision', target: 'Adversarial Example'},
-      {source: 'Recommendation System', target: 'Recommendation System'},
-      {source: 'Recommendation System', target: 'Machine Learning (ML)' },
-      {source: 'Recommendation System', target: 'Cold Start Problem'},
-      {source: 'Recommendation System', target: 'Overfitting'},
-      {source: 'Recommendation System', target: 'Bias (in AI)' },
-      {source: 'Autonomous System', target: 'Autonomous System'},
-      {source: 'Autonomous System', target: 'Reinforcement Learning' },
-      {source: 'Autonomous System', target: 'Artificial Intelligence (AI)' },
-      {source: 'Generative AI (GenAI)', target: 'Generative AI (GenAI)' },
-      {source: 'Generative AI (GenAI), target: 'Transfer Learning' },
-      {source: 'Generative AI (GenAI)', target: 'Data Augmentation' },
-      {source: 'Predictive Analytics', target: 'Predictive Analytics' },
-      {source: 'Predictive Analytics', target: 'Machine Learning (ML)' },
-      {source: 'Predictive Analytics', target: 'Model Interpretability' },
-      {source: 'Predictive Analytics', target: 'Hyperparameter' },
-      {source: 'AI in Healthcare', target: 'Artificial Intelligence (AI)' },
-      {source: 'AI in Healthcare', target: 'Model Interpretability' },
-      {source: 'AI in Healtcare', target: 'Deep Learning' },
-      {source: 'AI in Healthcare', target: 'Bias (in AI)' }
+      {source: 'NLP', target: 'Natural Language Processing (NLP)', explicit: 3, implicit:1},
+      {source: 'NLP', target: 'Deep Learning', explicit: 2, implicit: 2},
+      {source: 'NLP', target: 'Neural Network', explicit: 1, implicit:2},
+      {source: 'Computer Vision', target: 'Computer Vision', explicit: 3, implicit:0},
+      {source: 'Computer Vision', target: 'Deep Learning', explicit: 1, implicit: 2},
+      {source: 'Computer Vision', target: 'Neural Network', explicit: 1, implicit: 2},
+      {source: 'Computer Vision', target: 'Adversarial Example', explicit: 0, implicit: 2},
+      {source: 'Recommendation System', target: 'Recommendation System', explicit: 2, implicit: 0},
+      {source: 'Recommendation System', target: 'Machine Learning (ML)', explicit: 1, implicit: 2},
+      {source: 'Recommendation System', target: 'Cold Start Problem', explicit: 1, implicit: 0},
+      {source: 'Recommendation System', target: 'Overfitting', explicit: 1, implicit:1},
+      {source: 'Recommendation System', target: 'Bias (in AI)', explicit: 1, implicit:2},
+      {source: 'Autonomous System', target: 'Autonomous System', explicit: 2, implicit: 0},
+      {source: 'Autonomous System', target: 'Reinforcement Learning', explicit: 1, implicit: 2},
+      {source: 'Autonomous System', target: 'Artificial Intelligence (AI)', explicit: 0, implicit:2},
+      {source: 'Generative AI', target: 'Generative AI (GenAI)', explicit: 3, implicit: 0},
+      {source: 'Generative AI', target: 'Transfer Learning', explicit: 0, implicit: 2},
+      {source: 'Generative AI', target: 'Data Augmentation', explicit: 1, implicit: 1},
+      {source: 'Predictive Analytics', target: 'Predictive Analytics', explicit:3, implicit:0},
+      {source: 'Predictive Analytics', target: 'Machine Learning (ML)', explicit:1, implicit:2},
+      {source: 'Predictive Analytics', target: 'Model Interpretability', explicit:1, implicit:2},
+      {source: 'Predictive Analytics', target: 'Hyperparameter', explicit: 1, implicit:1},
+      {source: 'Healthcare AI', target: 'Artificial Intelligence (AI)', explicit:2, implicit:1},
+      {source: 'Healthcare AI', target: 'Model Interpretability', explicit:2, implicit:0},
+      {source: 'Healthcare AI', target: 'Deep Learning', explicit:1, implicit:2},
+      {source: 'Healthcare AI', target: 'Bias (in AI)', explicit:1, implicit:1}
     ];
 
-    const svg = d3.select("svg");
-    const width = +svg.attr("width");
-    const height = +svg.attr("height");
-
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links.id, d => d.id).distance(140))
-      .force("charge", d3.forceManyBody().stength(-250))
-      .force("center", d3.forceCenter(width/2, height/2));
+      .force("link", d3.forceLink(links).id(d => d.id).distance(186))
+      .force("charge", d3.forceManyBody().strength(-530))
+      .force("center", d3.forceCenter(width / 2, height / 2));
 
-    const link = svg.append("g")
-      .attr("stroke, #999")
-      .attr("stroke-opacity, 0.6")
-      .selectAll("line")
+    // Draw links, separate by type
+    const linkG = svg.append("g");
+    const linkElements = linkG.selectAll("line")
       .data(links)
-      .join("Line")
-      .attr("stroke-width, 2");
+      .join("line")
+      .attr("class", d => d.explicit > 0 ? "link-explicit" : "link-implicit")
+      .attr("stroke-width", d => d.explicit > 0 
+          ? 2.5 + Math.max(1.5, d.explicit * 1.35)
+          : 1.9 + Math.max(1.1, d.implicit * 1.19)
+      )
+      .attr("stroke-dasharray", d => d.explicit === 0 && d.implicit > 0 ? "7,5" : null);
 
+    linkElements.append("title")
+      .text(d => `Explicit: ${d.explicit}, Implicit: ${d.implicit}`);
+
+    // Draw nodes (with color!)
     const node = svg.append("g")
-      .attr("stroke, #fff")
-      .attr("cyrcle", 20)
+      .selectAll("g")
       .data(nodes)
-      .join("circle")
-      .attr("r", 20)
-      .attr("fill", d => d.type === "app" ? "#3b82f6" : "#10b981")
-      .call(drag(simulation));
+      .join("g")
+      .attr("class", d => "node " + d.type);
+
+    node.append("circle")
+      .attr("r", d => d.type === "app" ? 36 : 24)
+      .attr("fill", d => d.type === "app" ? "#2563eb" : "#10b981");
+
+    node.append("text")
+      .attr("dy", 5)
+      .attr("text-anchor", "middle")
+      .text(d => d.id);
 
     node.append("title")
       .text(d => d.id);
 
-    const label = svg.append("g")
-      .selectAll("text")
-      .data(nodes)
-      .join(("text")
-      .attr("hy", ".35em")
-      .attr("text-anchor", "middle")
-      .text(d => d.id);
+    // Edge labels at the midpoint
+    const edgeLabelG = svg.append("g");
+    const edgeLabels = edgeLabelG.selectAll("text")
+      .data(links)
+      .join("text")
+      .attr("class", "edge-label")
+      .attr("font-size", "1.01em")
+      .text(d => `E:${d.explicit} I:${d.implicit}`);
 
     simulation.on("tick", () => {
-      link
+      linkElements
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
-        .attr("cx2", d => d.target.x)
+        .attr("x2", d => d.target.x)
         .attr("y2", d => d.target.y);
 
       node
-        .attr("cx", d => d.x)
-        .attr("cy", d => d.y);
+        .attr("transform", d => `translate(${d.x},${d.y})`);
 
-      label
-        .attr("x", d => d.x)
-        .attr("y", d => d.y - 25);
+      // Position edge labels at midpoints, offset a bit for clarity
+      edgeLabels
+        .attr("x", d => (d.source.x + d.target.x) / 2 + 11)
+        .attr("y", d => (d.source.y + d.target.y) / 2 - 12)
     });
 
-    function drag(simulation) {
-      function dragstarted(event, d) {
+    // Drag functionality
+    node.call(d3.drag()
+      .on("start", (event, d) => {
         if (!event.active) simulation.alphaTarget(0.3).restart();
-        d.fx = d.x;
-        d.fy = d.y;
-      }
-      function dragged(event, d) {
-        d.fx = event.x;
-        d.fy = event.y;
-      }
-      function dragended(event, d) {
+        d.fx = d.x; d.fy = d.y;
+      })
+      .on("drag", (event, d) => {
+        d.fx = event.x; d.fy = event.y;
+      })
+      .on("end", (event, d) => {
         if (!event.active) simulation.alphaTarget(0);
-        d.fx = null;
-        d.fy = null;
-      }
-      return d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended);
-    }
+        d.fx = null; d.fy = null;
+      })
+    );
+
+    // Responsive resize
+    window.addEventListener('resize', () => {
+      [width, height] = getSize();
+      svg.attr("width", width).attr("height", height);
+      simulation.force("center", d3.forceCenter(width / 2, height / 2));
+      simulation.alpha(0.16).restart();
+    });
   </script>
 </body>
 </html>
